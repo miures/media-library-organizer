@@ -1,0 +1,51 @@
+# Logs
+*.log
+media_organizer.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Reportes
+*_report.json
+duplicate_movies_report.json
+organization_report.json
+media_organization_report.json
+
+# Configuración local
+config.py
+local_config.py
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backups
+*.bak
+backup-*.txt

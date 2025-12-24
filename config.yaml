@@ -1,0 +1,91 @@
+# Configuración del Media Library Organizer
+# Edita este archivo según tus necesidades
+
+# Directorios a organizar
+directories:
+  movies:
+    source: "/path/to/downloads/movies"  # Carpeta de descarga de películas
+    destination: "/path/to/media/Movies"  # Biblioteca de Jellyfin/Plex
+    enabled: true
+    auto_organize: true
+    
+  series:
+    source: "/path/to/downloads/series"
+    destination: "/path/to/media/Series"
+    enabled: true
+    auto_organize: true
+    
+  anime:
+    source: "/path/to/downloads/anime"
+    destination: "/path/to/media/Anime"
+    enabled: false
+    auto_organize: false
+    
+  documentaries:
+    source: "/path/to/downloads/documentaries"
+    destination: "/path/to/media/Documentaries"
+    enabled: false
+    auto_organize: false
+
+# Configuración general
+settings:
+  dry_run: false  # true = modo simulación, false = ejecutar cambios reales
+  preserve_permissions: true
+  create_nfo_files: false
+  move_or_copy: "move"  # "move" o "copy"
+  min_file_size_mb: 100  # Ignorar archivos menores a X MB
+  
+  # Gestión de duplicados
+  duplicates:
+    detect: true
+    auto_delete_lower_quality: false
+    move_to_folder: "/path/to/duplicates"  # null para no mover
+    
+  # Extensiones de video válidas
+  video_extensions:
+    - .mkv
+    - .mp4
+    - .avi
+    - .m4v
+    - .mov
+    - .wmv
+    - .flv
+    
+  # Extensiones de metadata
+  metadata_extensions:
+    - .jpg
+    - .jpeg
+    - .png
+    - .nfo
+    - .srt
+    - .sub
+    - .idx
+    - .ass
+
+# Programación automática
+schedule:
+  enabled: false  # true para habilitar ejecución automática
+  interval: "hourly"  # "hourly", "daily", "weekly", "custom"
+  custom_cron: "0 */2 * * *"  # Cada 2 horas (solo si interval = "custom")
+  
+# Notificaciones (opcional)
+notifications:
+  enabled: false
+  discord_webhook: null
+  telegram_bot_token: null
+  telegram_chat_id: null
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    from_email: "your-email@gmail.com"
+    to_email: "your-email@gmail.com"
+    password: "your-app-password"
+
+# Logs
+logging:
+  enabled: true
+  log_file: "/var/log/media-organizer/organizer.log"
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  max_log_size_mb: 10
+  backup_count: 5

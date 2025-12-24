@@ -1,0 +1,64 @@
+# Ejemplo de Configuración para Servidor TrueNAS (192.168.1.12)
+# Ajusta las rutas según tu configuración real
+
+directories:
+  movies:
+    source: "/mnt/tank/downloads/qbittorrent-movies/completed"
+    destination: "/mnt/tank/media/Movies"
+    enabled: true
+    auto_organize: true
+    
+  anime:
+    source: "/mnt/tank/downloads/qbittorrent-anime/completed"
+    destination: "/mnt/tank/media/Anime"
+    enabled: true
+    auto_organize: true
+    
+  series:
+    source: "/mnt/tank/downloads/series"
+    destination: "/mnt/tank/media/Series"
+    enabled: false  # Desactivado por ahora
+    auto_organize: false
+
+settings:
+  dry_run: true  # ⚠️ Cambiar a false cuando estés listo
+  preserve_permissions: true
+  create_nfo_files: false
+  move_or_copy: "move"
+  min_file_size_mb: 100
+  
+  duplicates:
+    detect: true
+    auto_delete_lower_quality: false
+    move_to_folder: "/mnt/tank/media/Duplicates"
+    
+  video_extensions:
+    - .mkv
+    - .mp4
+    - .avi
+    - .m4v
+    - .mov
+    
+  metadata_extensions:
+    - .jpg
+    - .jpeg
+    - .png
+    - .nfo
+    - .srt
+    - .sub
+    - .ass
+
+schedule:
+  enabled: true
+  interval: "custom"
+  custom_cron: "0 */2 * * *"  # Cada 2 horas
+
+notifications:
+  enabled: false
+
+logging:
+  enabled: true
+  log_file: "/mnt/tank/logs/media-organizer/organizer.log"
+  log_level: "INFO"
+  max_log_size_mb: 10
+  backup_count: 5
