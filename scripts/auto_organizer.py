@@ -12,6 +12,7 @@ import shutil
 import logging
 import yaml
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -122,6 +123,129 @@ class MediaOrganizerAutomated:
                     return year
         return None
     
+    def detect_series_info(self, filename: str) -> Optional[Dict[str, any]]:
+        """Detecta si un archivo es una serie y extrae información"""
+        # Patrones para detectar episodios (orden importa: más específicos primero)
+        patterns = [
+            # S01E01, S1E1, etc.
+            r'[Ss](\d{1,2})[Ee](\d{1,3})',
+            # 1x01, 1x1, etc.
+            r'(\d{1,2})x(\d{1,3})',
+            # Nombre Serie 01 al final (debe ir antes del patrón general)
+            r'\s+(\d{1,3})(?:v\d+)?$',
+            # - 01 -, _01_, etc.
+            r'[\s\-_](\d{1,3})[\s\-_]',
+            # Episode 01, EP01, etc.
+            r'[Ee]pisode[\s\-_]?(\d{1,3})',
+            r'[Ee][Pp][\s\-_]?(\d{1,3})',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, filename)
+            if match:
+                groups = match.groups()
+                if len(groups) == 2:  # Tiene temporada y episodio
+                    season = int(groups[0])
+                    episode = int(groups[1])
+                elif len(groups) == 1:  # Solo episodio
+                    season = 1
+                    episode = int(groups[0])
+                else:
+                    continue
+                
+                # Extraer el nombre de la serie (antes del patrón)
+                series_name = filename[:match.start()]
+                series_name = self.clean_title(series_name)
+                
+                return {
+                    'series_name': series_name,
+                    'season': season,
+                    'episode': episode,
+                    'is_series': True
+                }
+        
+        return None
+    
+    def create_tvshow_nfo(self, series_name: str, dest_folder: Path) -> bool:
+        """Crea archivo tvshow.nfo para la serie"""
+        try:
+            nfo_path = dest_folder / "tvshow.nfo"
+            
+            # Si ya existe, no sobreescribir
+            if nfo_path.exists():
+                return True
+            
+            # Crear estructura XML
+            tvshow = ET.Element('tvshow')
+            
+            title = ET.SubElement(tvshow, 'title')
+            title.text = series_name
+            
+            plot = ET.SubElement(tvshow, 'plot')
+            plot.text = f"Serie de anime: {series_name}"
+            
+            # Agregar año si se detecta
+            year_match = re.search(r'\b(19|20)\d{2}\b', series_name)
+            if year_match:
+                year_elem = ET.SubElement(tvshow, 'year')
+                year_elem.text = year_match.group(0)
+                premiered = ET.SubElement(tvshow, 'premiered')
+                premiered.text = f"{year_match.group(0)}-01-01"
+            
+            genre = ET.SubElement(tvshow, 'genre')
+            genre.text = "Anime"
+            
+            # Crear árbol y escribir
+            tree = ET.ElementTree(tvshow)
+            ET.indent(tree, space="  ")
+            tree.write(nfo_path, encoding='utf-8', xml_declaration=True)
+            
+            self.logger.debug(f"Creado tvshow.nfo para {series_name}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error creando tvshow.nfo para {series_name}: {e}")
+            return False
+    
+    def create_episode_nfo(self, video_file: Path, series_info: Dict, dest_folder: Path) -> bool:
+        """Crea archivo NFO para un episodio"""
+        try:
+            nfo_path = dest_folder / f"{video_file.stem}.nfo"
+            
+            # Si ya existe, no sobreescribir
+            if nfo_path.exists():
+                return True
+            
+            # Crear estructura XML
+            episodedetails = ET.Element('episodedetails')
+            
+            title = ET.SubElement(episodedetails, 'title')
+            title.text = f"{series_info['series_name']} - Episodio {series_info['episode']}"
+            
+            showtitle = ET.SubElement(episodedetails, 'showtitle')
+            showtitle.text = series_info['series_name']
+            
+            season = ET.SubElement(episodedetails, 'season')
+            season.text = str(series_info['season'])
+            
+            episode = ET.SubElement(episodedetails, 'episode')
+            episode.text = str(series_info['episode'])
+            
+            plot = ET.SubElement(episodedetails, 'plot')
+            plot.text = f"Episodio {series_info['episode']} de {series_info['series_name']}"
+            
+            # Crear árbol y escribir
+            tree = ET.ElementTree(episodedetails)
+            ET.indent(tree, space="  ")
+            tree.write(nfo_path, encoding='utf-8', xml_declaration=True)
+            
+            self.logger.debug(f"Creado {nfo_path.name}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error creando episode.nfo para {video_file.name}: {e}")
+            return False
+    
     def get_file_hash(self, filepath: Path, chunk_size: int = 8192) -> str:
         """Calcula hash MD5 de un archivo"""
         md5 = hashlib.md5()
@@ -227,6 +351,89 @@ class MediaOrganizerAutomated:
             self.stats['errors'] += 1
             return False
     
+    def organize_series(self, video_file: Path, destination_root: Path) -> bool:
+        """Organiza una serie agrupando episodios por nombre de serie"""
+        try:
+            series_info = self.detect_series_info(video_file.name)
+            
+            # Si no se detecta como serie, tratarlo como película
+            if not series_info:
+                return self.organize_movie(video_file, destination_root)
+            
+            series_name = series_info['series_name']
+            season = series_info['season']
+            episode = series_info['episode']
+            
+            # Limpiar caracteres inválidos
+            series_name = re.sub(r'[<>:"/\\|?*]', '', series_name).strip()
+            
+            # Crear estructura: Series/SeriesName/ o Series/SeriesName/Season 01/
+            dest_folder = destination_root / series_name
+            
+            # Verificar si ya existe el archivo
+            if dest_folder.exists():
+                # Buscar si ya existe un archivo similar
+                existing_pattern = f"*{season:02d}*{episode:02d}*{video_file.suffix}"
+                existing_files = list(dest_folder.glob(existing_pattern))
+                if not existing_files:
+                    # Buscar sin formato de ceros
+                    existing_pattern2 = f"*{season}*{episode:02d}*{video_file.suffix}"
+                    existing_files = list(dest_folder.glob(existing_pattern2))
+                
+                if existing_files:
+                    self.logger.info(f"Ya existe: {series_name} S{season:02d}E{episode:02d}")
+                    self.stats['skipped'] += 1
+                    return False
+            
+            # Modo dry-run
+            if self.config['settings']['dry_run']:
+                nfo_msg = ""
+                if self.config['settings'].get('create_nfo_files', False):
+                    nfo_msg = " + NFO"
+                self.logger.info(f"[DRY-RUN] Movería {video_file.name} -> {dest_folder}/{nfo_msg}")
+                self.stats['processed'] += 1
+                return True
+            
+            # Crear carpeta destino
+            dest_folder.mkdir(parents=True, exist_ok=True)
+            
+            # Crear tvshow.nfo si está habilitado
+            if self.config['settings'].get('create_nfo_files', False):
+                self.create_tvshow_nfo(series_name, dest_folder)
+            
+            # Mover/copiar archivo de video
+            dest_video = dest_folder / video_file.name
+            move_or_copy = self.config['settings'].get('move_or_copy', 'move')
+            
+            if move_or_copy == 'copy':
+                shutil.copy2(video_file, dest_video)
+            else:
+                shutil.move(str(video_file), str(dest_video))
+            
+            self.logger.info(f"✓ {video_file.name} -> {series_name}/")
+            
+            # Crear episode.nfo si está habilitado
+            if self.config['settings'].get('create_nfo_files', False):
+                self.create_episode_nfo(video_file, series_info, dest_folder)
+            
+            # Mover archivos relacionados
+            related_files = self.find_related_files(video_file)
+            for related in related_files:
+                dest_related = dest_folder / related.name
+                if move_or_copy == 'copy':
+                    shutil.copy2(related, dest_related)
+                else:
+                    shutil.move(str(related), str(dest_related))
+            
+            self.stats['moved'] += 1
+            self.stats['processed'] += 1
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error procesando serie {video_file.name}: {e}")
+            self.stats['errors'] += 1
+            return False
+    
     def process_directory(self, category: str, source: Path, destination: Path):
         """Procesa un directorio completo"""
         self.logger.info(f"Procesando categoría: {category}")
@@ -250,11 +457,10 @@ class MediaOrganizerAutomated:
             if not self.is_valid_video(video_file):
                 continue
             
-            if category in ['movies', 'anime', 'documentaries']:
+            if category in ['movies', 'documentaries']:
                 self.organize_movie(video_file, destination)
-            elif category in ['series']:
-                # TODO: Implementar organización de series
-                self.logger.debug(f"Series aún no implementado: {video_file.name}")
+            elif category in ['series', 'anime']:
+                self.organize_series(video_file, destination)
     
     def run(self):
         """Ejecuta el organizador para todos los directorios configurados"""

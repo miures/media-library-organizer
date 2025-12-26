@@ -4,22 +4,22 @@
 # Directorios a organizar
 directories:
   movies:
-    source: "/path/to/downloads/movies"  # Carpeta de descarga de películas
-    destination: "/path/to/media/Movies"  # Biblioteca de Jellyfin/Plex
-    enabled: true
-    auto_organize: true
-    
-  series:
-    source: "/path/to/downloads/series"
-    destination: "/path/to/media/Series"
-    enabled: true
-    auto_organize: true
-    
-  anime:
-    source: "/path/to/downloads/anime"
-    destination: "/path/to/media/Anime"
+    source: "/mnt/PROD/MEDIA/Downloads/Movies"  # 3TB películas
+    destination: "/mnt/PROD/MEDIA/Downloads/Movies"  # Organizar en el mismo lugar
     enabled: false
     auto_organize: false
+    
+  series:
+    source: "/mnt/PROD/MEDIA/Downloads/Series"  # 952GB series
+    destination: "/mnt/PROD/MEDIA/Downloads/Series"  # Organizar en el mismo lugar
+    enabled: false
+    auto_organize: false
+    
+  anime:
+    source: "/mnt/PROD/MEDIA/Downloads/Anime"  # 3.1TB anime
+    destination: "/mnt/PROD/MEDIA/Downloads/Anime"  # Organizar en el mismo lugar
+    enabled: true
+    auto_organize: true
     
   documentaries:
     source: "/path/to/downloads/documentaries"
@@ -29,9 +29,9 @@ directories:
 
 # Configuración general
 settings:
-  dry_run: false  # true = modo simulación, false = ejecutar cambios reales
+  dry_run: true  # true = modo simulación, false = ejecutar cambios reales
   preserve_permissions: true
-  create_nfo_files: false
+  create_nfo_files: true  # Crear archivos .nfo con metadata para Jellyfin/Plex
   move_or_copy: "move"  # "move" o "copy"
   min_file_size_mb: 100  # Ignorar archivos menores a X MB
   
@@ -39,7 +39,7 @@ settings:
   duplicates:
     detect: true
     auto_delete_lower_quality: false
-    move_to_folder: "/path/to/duplicates"  # null para no mover
+    move_to_folder: "/mnt/PROD/MEDIA/Duplicados"  # Carpeta existente para duplicados
     
   # Extensiones de video válidas
   video_extensions:
